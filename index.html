@@ -1,410 +1,412 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Award, RefreshCw, ChevronDown, WifiOff, Search, ArrowLeft, 
-  UserCircle, CheckCircle2, AlertCircle, Trash2, UserPlus, X, Plus 
-} from 'lucide-react';
-
-// ==========================================
-// PENTING: GANTIKAN URL DI BAWAH DENGAN URL GOOGLE SCRIPT ANDA
-// ==========================================
-const API_URL = "https://script.google.com/macros/s/AKfycbzBgBsZusvqzZPgZW06nRC9ffsKZiOIXKUzyCFJIQx8teR9kckwPb3cxnuu0xChfvFP2w/exec"; 
-
-const DEPARTMENTS = [
-  { id: 'perubatan_am', name: 'JABATAN PERUBATAN AM' },
-  { id: 'perubatan_respiratori', name: 'JABATAN PERUBATAN RESPIRATORI' },
-  { id: 'kardiologi', name: 'JABATAN KARDIOLOGI' },
-  { id: 'onkologi', name: 'JABATAN ONKOLOGI & RADIOTERAPI' },
-  { id: 'phlebotomy', name: 'UNIT PHLEBOTOMY' },
-  { id: 'psikiatri', name: 'JABATAN PSIKIATRI & KESIHATAN MENTAL' },
-  { id: 'dermatologi', name: 'JABATAN DERMATOLOGI' },
-  { id: 'pembedahan_am', name: 'JABATAN PEMBEDAHAN AM' },
-  { id: 'ortopedik', name: 'JABATAN ORTOPEDIK' },
-  { id: 'oftalmologi', name: 'JABATAN OFTALMOLOGI' },
-  { id: 'ent', name: 'JABATAN OTORINOLARINGOLONGI ( ENT )' },
-  { id: 'plastik', name: 'JABATAN PEMBEDAHAN PLASTIK & REKONSTRUKTIF' },
-  { id: 'kardiothoraksik', name: 'JABATAN PEMBEDAHAN KARDIOTHORASIK' },
-  { id: 'neurosurgery', name: 'JABATAN NEUROSURGERI' },
-  { id: 'urologi', name: 'JABATAN UROLOGI' },
-  { id: 'anestesi', name: 'JABATAN ANESTESIOLOGI & RAWATAN RAPI' },
-  { id: 'kecemasan', name: 'JABATAN KECEMASAN' },
-  { id: 'ong', name: 'JABATAN OBSTETRIK & GINEKOLOGI' },
-  { id: 'pediatrik', name: 'JABATAN PEDIATRIK' },
-  { id: 'pediatrik_kardio', name: 'JABATAN PEDIATRIK KARDIOLOGI' },
-  { id: 'patologi', name: 'JABATAN PATOLOGI' },
-  { id: 'radiologi', name: 'JABATAN RADIOLOGI' },
-  { id: 'transfusi', name: 'JABATAN PERUBATAN TRANFUSI' },
-  { id: 'forensik', name: 'JABATAN PERUBATAN FORENSIK' },
-  { id: 'nuklear', name: 'JABATAN PERUBATAN NUKLEAR' },
-  { id: 'farmasi', name: 'JABATAN FARMASI' },
-  { id: 'dietetik', name: 'JABATAN DIETETIK & SAJIAN' },
-  { id: 'kerja_sosial', name: 'JABATAN KERJA PERUBATAN SOSIAL' },
-  { id: 'rekod', name: 'JABATAN REKOD PERUBATAN' },
-  { id: 'rehabilitasi', name: 'JABATAN REHABILITASI' },
-  { id: 'hr', name: 'SEKSYEN SUMBER MANUSIA' },
-  { id: 'khidmat_pengurusan', name: 'SEKSYEN KHIDMAT PENGURUSAN' },
-  { id: 'perolehan', name: 'SEKSYEN PEROLEHAN' },
-  { id: 'kewangan', name: 'SEKSYEN KEWANGAN' },
-  { id: 'pembangunan', name: 'SEKSYEN PEMBANGUNAN' },
-  { id: 'keselamatan', name: 'UNIT KESELAMATAN' },
-  { id: 'korporat', name: 'UNIT KOMUNIKASI KORPORAT' },
-  { id: 'aset', name: 'UNIT PENGURUSAN ASET' },
-  { id: 'perpustakaan', name: 'UNIT PERPUSTAKAAN' },
-  { id: 'it', name: 'UNIT TEKNOLOGI MAKLUMAT' },
-  { id: 'kejuruteraan', name: 'UNIT KEJURUTERAAN & OPERASI' },
-  { id: 'kualiti', name: 'UNIT KUALITI' },
-  { id: 'neurologi_unit', name: 'JABATAN NEUROLOGI' },
-  { id: 'nefrologi', name: 'JABATAN NEFROLOGI' },
-  { id: 'kluster', name: 'UNIT KLUSTER' },
-  { id: 'crc', name: 'PUSAT PENYELIDIKAN KLINIKAL (CRC)' },
-  { id: 'infeksi', name: 'UNIT KAWALAN INFEKSI' },
-  { id: 'kejururawatan', name: 'UNIT KEJURURAWATAN' },
-  { id: 'ppp', name: 'UNIT PENYELIA PPP' },
-  { id: 'medicolegal', name: 'UNIT MEDICOLEGAL' },
-  { id: 'osh', name: 'JABATAN PERUBATAN DAN KESIHATAN PEKERJAAN' },
-  { id: 'pengarah', name: 'PEJABAT PENGARAH' },
-  { id: 'islam', name: 'UNIT HAL EHWAL ISLAM' },
-  { id: 'genetik', name: 'JABATAN GENETIK' },
-  { id: 'jangkitan', name: 'UNIT KAWALAN PENYAKIT BERJANGKIT' },
-  { id: 'rheumatologi', name: 'UNIT RHEUMATOLOGI' },
-  { id: 'hematologi', name: 'UNIT HEMATOLOGI' },
-  { id: 'endokrin', name: 'UNIT ENDOKRIN' },
-  { id: 'gastro', name: 'UNIT GASTROENTEROLOGI & HEPATOLOGI' },
-  { id: 'fisioterapi', name: 'UNIT FISIOTERAPI' },
-  { id: 'carakerja', name: 'UNIT CARAKERJA' },
-];
-
-const MONTHS = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
-
-const PieChart = ({ percentage, size = 32 }) => {
-  const strokeWidth = 5;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
-  const color = percentage === 0 ? 'stroke-slate-200' : percentage < 50 ? 'stroke-amber-500' : 'stroke-emerald-500';
-  
-  return (
-    <div className="relative inline-flex items-center justify-center shrink-0">
-      <svg width={size} height={size} className="rotate-[-90deg]">
-        <circle className="stroke-slate-100" strokeWidth={strokeWidth} fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
-        <circle className={`${color} transition-all duration-1000`} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
-      </svg>
-      <span className="absolute text-[7px] font-black text-slate-700">{percentage}%</span>
-    </div>
-  );
-};
-
-const App = () => {
-  const [activeView, setActiveView] = useState('jabatan'); 
-  const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
-  const [selectedDeptId, setSelectedDeptId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [submissions, setSubmissions] = useState([]);
-  const [masterList, setMasterList] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState(null);
-  const [showAddStaff, setShowAddStaff] = useState(false);
-  const [newStaff, setNewStaff] = useState({ name: '', deptId: '' });
-
-  const normalizeName = (name) => {
-    if (!name) return "";
-    return name.toString().toUpperCase()
-      .replace(/\s+/g, ' ')           
-      .replace(/\bBT\.?\b/g, 'BINTI') 
-      .replace(/\bB\b\.?\b/g, 'BIN') 
-      .replace(/[^A-Z\s]/g, '') 
-      .trim();
-  };
-
-  const getFlexibleValue = (item, keywords) => {
-    const keys = Object.keys(item);
-    const targetKey = keys.find(k => {
-      const normalizedKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-      return keywords.some(kw => normalizedKey.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
-    });
-    return targetKey ? item[targetKey] : null;
-  };
-
-  const fetchData = async () => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const response = await fetch(API_URL);
-      const result = await response.json();
-      
-      const formattedSubmissions = (result.submissions || []).map((item, index) => ({
-        id: `S${index}`,
-        name: normalizeName(getFlexibleValue(item, ["NAMA", "PEGAWAI"])),
-        deptName: (getFlexibleValue(item, ["JABATAN", "UNIT"]) || "").toString().toUpperCase().trim(),
-        month: (getFlexibleValue(item, ["BULAN"]) || "").toString().trim(),
-        hours: parseFloat(getFlexibleValue(item, ["JAM", "BERKURSUS"])) || 0,
-        cpdPoints: parseFloat(getFlexibleValue(item, ["MATA", "CPD"])) || 0
-      }));
-
-      const formattedStaff = (result.staffList || []).map(item => ({
-        name: normalizeName(item["Nama"] || item["name"]),
-        deptId: item["JabatanID"] || item["deptId"]
-      }));
-
-      setSubmissions(formattedSubmissions);
-      setMasterList(formattedStaff);
-    } catch (err) {
-      setFetchError("Gagal menarik data. Sila semak pautan Google Script.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const handleAddStaff = async (e) => {
-    e.preventDefault();
-    if (!newStaff.name || !newStaff.deptId) return;
-    
-    setShowAddStaff(false);
-    setLoading(true);
-
-    try {
-      const payload = { action: 'add', name: normalizeName(newStaff.name), deptId: newStaff.deptId };
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      fetchData(); 
-      setNewStaff({ name: '', deptId: '' });
-    } catch (err) {
-      alert("Gagal daftar pegawai.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteStaff = async (name) => {
-    if (!window.confirm(`Padam rekod ${name}?`)) return;
-    
-    setLoading(true);
-    try {
-      const payload = { action: 'delete', name: name };
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      fetchData();
-    } catch (err) {
-      alert("Gagal memadam.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const complianceData = useMemo(() => {
-    return DEPARTMENTS.map(dept => {
-      const namesInSheet = submissions
-        .filter(s => s.deptName.includes(dept.name.toUpperCase()))
-        .map(s => s.name);
-      const namesInMaster = masterList
-        .filter(m => m.deptId === dept.id)
-        .map(m => m.name);
-      
-      const allUniqueInDept = [...new Set([...namesInSheet, ...namesInMaster])];
-      const totalDenominator = allUniqueInDept.length;
-
-      const submittedCount = allUniqueInDept.filter(name => 
-        submissions.some(s => s.name === name && s.month.toLowerCase().includes(selectedMonth.toLowerCase()))
-      ).length;
-
-      const percentage = totalDenominator > 0 ? Math.round((submittedCount / totalDenominator) * 100) : 0;
-      
-      return { ...dept, count: submittedCount, total: totalDenominator, percentage };
-    }).sort((a, b) => b.percentage - a.percentage);
-  }, [selectedMonth, submissions, masterList]);
-
-  const staffData = useMemo(() => {
-    const deptObj = DEPARTMENTS.find(d => d.id === selectedDeptId);
-    const relevantNames = [...new Set([
-      ...submissions.filter(s => !selectedDeptId || s.deptName.includes(deptObj?.name)).map(s => s.name),
-      ...masterList.filter(m => !selectedDeptId || m.deptId === selectedDeptId).map(m => m.name)
-    ])];
-
-    return relevantNames.map(name => {
-      const staffSubs = submissions.filter(s => s.name === name);
-      const masterInfo = masterList.find(m => m.name === name);
-      return {
-        name,
-        deptName: masterInfo ? DEPARTMENTS.find(d => d.id === masterInfo.deptId)?.name : (staffSubs[0]?.deptName || "UNIT LUAR"),
-        hasSubmitted: staffSubs.some(s => s.month.toLowerCase().includes(selectedMonth.toLowerCase())),
-        yearlyTotal: staffSubs.reduce((sum, curr) => sum + curr.hours, 0),
-        cpdPoints: staffSubs.reduce((sum, curr) => sum + curr.cpdPoints, 0),
-        months: [...new Set(staffSubs.map(s => s.month))].sort().join(', ')
-      };
-    }).filter(s => s.name.includes(searchTerm.toUpperCase()));
-  }, [selectedDeptId, selectedMonth, searchTerm, submissions, masterList]);
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-10 font-sans selection:bg-blue-100">
-      <header className="bg-white border-b sticky top-0 z-30 p-3 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg"><Award size={20} /></div>
-            <div className="leading-none">
-              <h1 className="text-md font-black tracking-tight uppercase">40J & MyCPD LIVE</h1>
-              <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Dynamic Sync v3.6</p>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pemantauan Kursus 40 Jam & MyCPD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .animate-pulse-red { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .pie-chart { transform: rotate(-90deg); border-radius: 50%; }
+        .scale-in { animation: scaleIn 0.15s ease-out; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root">
+        <div class="flex items-center justify-center min-h-screen text-center p-8 bg-white">
+            <div>
+                <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-slate-500 font-bold text-sm uppercase tracking-widest leading-relaxed">Menghubungkan Data Google Sheet...</p>
             </div>
-          </div>
-          
-          <div className="flex bg-slate-100 p-1 rounded-lg border scale-90">
-            <button onClick={() => {setActiveView('jabatan'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'jabatan' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Jabatan</button>
-            <button onClick={() => {setActiveView('individu'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'individu' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Individu</button>
-          </div>
-
-          <div className="flex items-center gap-2 scale-90">
-            <button onClick={() => setShowAddStaff(true)} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase flex items-center gap-1.5 shadow-md hover:bg-indigo-700 transition-all active:scale-95"><UserPlus size={14} /> Daftar Pegawai</button>
-            <button onClick={fetchData} disabled={loading} className="p-2 bg-white border rounded-lg hover:bg-slate-50 active:scale-90 transition-all"><RefreshCw size={14} className={loading ? "animate-spin" : ""} /></button>
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border rounded-lg text-[9px] font-bold p-2 outline-none cursor-pointer focus:ring-2 focus:ring-blue-500/20">
-              {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
         </div>
-      </header>
+    </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        {fetchError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-[10px] font-bold flex items-center gap-2 animate-pulse">
-            <WifiOff size={14} /> {fetchError}
-          </div>
-        )}
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-        {activeView === 'jabatan' && !selectedDeptId ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 animate-in fade-in duration-500">
-            {complianceData.map(dept => (
-              <button 
-                key={dept.id} 
-                onClick={() => setSelectedDeptId(dept.id)} 
-                className="text-left p-2.5 rounded-xl border-2 bg-white hover:border-blue-400 shadow-sm transition-all group flex flex-col justify-between h-[90px]"
-              >
-                <h4 className="font-bold text-[9px] mb-1.5 h-6 line-clamp-2 uppercase leading-tight text-slate-600 group-hover:text-blue-700 transition-colors">{dept.name}</h4>
-                <div className="flex justify-between items-end">
-                  <div className="flex-1 mr-2">
-                    <p className="text-[8px] font-black text-blue-600 uppercase mb-1">{dept.count}/{dept.total}</p>
-                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                      <div className="bg-blue-600 h-full transition-all duration-700" style={{width: `${dept.percentage}%`}}></div>
-                    </div>
-                  </div>
-                  <PieChart percentage={dept.percentage} />
+        // URL Web App (/exec) anda
+        const API_URL = "https://script.google.com/macros/s/AKfycbw9BDCBuxX0m9DLJpF4YJmUoKU-t2eNMD8kecdFZG5G5yPtunpWSP8Dd_OIMs7t-nnk5Q/exec"; 
+
+        const DEPARTMENTS = [
+            { id: 'perubatan_am', name: 'JABATAN PERUBATAN AM' },
+            { id: 'perubatan_respiratori', name: 'JABATAN PERUBATAN RESPIRATORI' },
+            { id: 'kardiologi', name: 'JABATAN KARDIOLOGI' },
+            { id: 'onkologi', name: 'JABATAN ONKOLOGI & RADIOTERAPI' },
+            { id: 'phlebotomy', name: 'UNIT PHLEBOTOMY' },
+            { id: 'psikiatri', name: 'JABATAN PSIKIATRI & KESIHATAN MENTAL' },
+            { id: 'dermatologi', name: 'JABATAN DERMATOLOGI' },
+            { id: 'pembedahan_am', name: 'JABATAN PEMBEDAHAN AM' },
+            { id: 'ortopedik', name: 'JABATAN ORTOPEDIK' },
+            { id: 'oftalmologi', name: 'JABATAN OFTALMOLOGI' },
+            { id: 'ent', name: 'JABATAN OTORINOLARINGOLONGI ( ENT )' },
+            { id: 'plastik', name: 'JABATAN PEMBEDAHAN PLASTIK & REKONSTRUKTIF' },
+            { id: 'kardiothoraksik', name: 'JABATAN PEMBEDAHAN KARDIOTHORASIK' },
+            { id: 'neurosurgery', name: 'JABATAN NEUROSURGERI' },
+            { id: 'urologi', name: 'JABATAN UROLOGI' },
+            { id: 'anestesi', name: 'JABATAN ANESTESIOLOGI & RAWATAN RAPI' },
+            { id: 'kecemasan', name: 'JABATAN KECEMASAN' },
+            { id: 'ong', name: 'JABATAN OBSTETRIK & GINEKOLOGI' },
+            { id: 'pediatrik', name: 'JABATAN PEDIATRIK' },
+            { id: 'pediatrik_kardio', name: 'JABATAN PEDIATRIK KARDIOLOGI' },
+            { id: 'patologi', name: 'JABATAN PATOLOGI' },
+            { id: 'radiologi', name: 'JABATAN RADIOLOGI' },
+            { id: 'transfusi', name: 'JABATAN PERUBATAN TRANFUSI' },
+            { id: 'forensik', name: 'JABATAN PERUBATAN FORENSIK' },
+            { id: 'nuklear', name: 'JABATAN PERUBATAN NUKLEAR' },
+            { id: 'farmasi', name: 'JABATAN FARMASI' },
+            { id: 'dietetik', name: 'JABATAN DIETETIK & SAJIAN' },
+            { id: 'kerja_sosial', name: 'JABATAN KERJA PERUBATAN SOSIAL' },
+            { id: 'rekod', name: 'JABATAN REKOD PERUBATAN' },
+            { id: 'rehabilitasi', name: 'JABATAN REHABILITASI' },
+            { id: 'hr', name: 'SEKSYEN SUMBER MANUSIA' },
+            { id: 'khidmat_pengurusan', name: 'SEKSYEN KHIDMAT PENGURUSAN' },
+            { id: 'perolehan', name: 'SEKSYEN PEROLEHAN' },
+            { id: 'kewangan', name: 'SEKSYEN KEWANGAN' },
+            { id: 'pembangunan', name: 'SEKSYEN PEMBANGUNAN' },
+            { id: 'keselamatan', name: 'UNIT KESELAMATAN' },
+            { id: 'korporat', name: 'UNIT KOMUNIKASI KORPORAT' },
+            { id: 'aset', name: 'UNIT PENGURUSAN ASET' },
+            { id: 'perpustakaan', name: 'UNIT PERPUSTAKAAN' },
+            { id: 'it', name: 'UNIT TEKNOLOGI MAKLUMAT' },
+            { id: 'kejuruteraan', name: 'UNIT KEJURUTERAAN & OPERASI' },
+            { id: 'kualiti', name: 'UNIT KUALITI' },
+            { id: 'neurologi_unit', name: 'JABATAN NEUROLOGI' },
+            { id: 'nefrologi', name: 'JABATAN NEFROLOGI' },
+            { id: 'kluster', name: 'UNIT KLUSTER' },
+            { id: 'crc', name: 'PUSAT PENYELIDIKAL KLINIKAL (CRC)' },
+            { id: 'infeksi', name: 'UNIT KAWALAN INFEKSI' },
+            { id: 'kejururawatan', name: 'UNIT KEJURURAWATAN' },
+            { id: 'ppp', name: 'UNIT PENYELIA PPP' },
+            { id: 'medicolegal', name: 'UNIT MEDICOLEGAL' },
+            { id: 'osh', name: 'JABATAN PERUBATAN DAN KESIHATAN PEKERJAAN' },
+            { id: 'pengarah', name: 'PEJABAT PENGARAH' },
+            { id: 'islam', name: 'UNIT HAL EHWAL ISLAM' },
+            { id: 'genetik', name: 'JABATAN GENETIK' },
+            { id: 'jangkitan', name: 'UNIT KAWALAN PENYAKIT BERJANGKIT' },
+            { id: 'rheumatologi', name: 'UNIT RHEUMATOLOGI' },
+            { id: 'hematologi', name: 'UNIT HEMATOLOGI' },
+            { id: 'endokrin', name: 'UNIT ENDOKRIN' },
+            { id: 'gastro', name: 'UNIT GASTROENTEROLOGI & HEPATOLOGI' },
+            { id: 'fisioterapi', name: 'UNIT FISIOTERAPI' },
+            { id: 'carakerja', name: 'UNIT CARAKERJA' },
+            { id: 'psikologi', name: 'UNIT PSIKOLOGI KAUNSELING' },
+        ];
+
+        const MONTHS = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const icons = {
+                award: <path d="M12 15l-2 5l2 2l2-2l-2-5zm0-13a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 10a4 4 0 1 1 0-8a4 4 0 0 1 0 8z"/>,
+                plus: <path d="M12 5v14m-7-7h14"/>,
+                refresh: <path d="M21 12a9 9 0 0 0-9-9a9.75 9.75 0 0 0-6.74 2.74L3 8m0 0V3m0 5h5m-5 4a9 9 0 0 0 9 9a9.75 9.75 0 0 0 6.74-2.74L21 16m0 0v5m0-5h-5"/>,
+                trash: <g><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" stroke="currentColor" fill="none"/><line x1="10" y1="11" x2="10" y2="17" stroke="currentColor"/><line x1="14" y1="11" x2="14" y2="17" stroke="currentColor"/></g>,
+                x: <g><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>,
+                arrowLeft: <path d="M19 12H5m7-7l-7 7l7 7"/>,
+                user: <g><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>,
+                check: <polyline points="20 6 9 17 4 12"/>,
+                alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const PieChart = ({ percentage, size = 32 }) => {
+            const strokeWidth = 5;
+            const radius = (size - strokeWidth) / 2;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            const color = percentage === 0 ? 'stroke-red-200' : percentage < 50 ? 'stroke-amber-500' : 'stroke-emerald-500';
+            return (
+                <div className="relative inline-flex items-center justify-center shrink-0">
+                    <svg width={size} height={size} className="pie-chart">
+                        <circle className="stroke-slate-100" strokeWidth={strokeWidth} fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                        <circle className={`${color} transition-all duration-1000`} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                    </svg>
+                    <span className="absolute text-[7px] font-black text-slate-700">{percentage}%</span>
                 </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-3">
-                {selectedDeptId && <button onClick={() => {setSelectedDeptId(null); setSearchTerm('');}} className="p-2 bg-white border rounded-full hover:bg-slate-50 transition-all active:scale-90"><ArrowLeft size={16} /></button>}
-                <div>
-                   <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight leading-none">{selectedDeptId ? DEPARTMENTS.find(d => d.id === selectedDeptId).name : 'Senarai Keseluruhan Pegawai'}</h2>
-                   <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Data bagi bulan {selectedMonth}</p>
-                </div>
-              </div>
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-                <input type="text" placeholder="Cari nama pegawai..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border-2 rounded-xl pl-9 pr-4 py-2 text-[10px] outline-none focus:ring-4 focus:ring-blue-600/10 uppercase font-bold transition-all" />
-              </div>
-            </div>
+            );
+        };
 
-            <div className="bg-white border rounded-2xl overflow-hidden shadow-sm border-slate-200">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Pegawai</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Jam</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">CPD</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">KPI 40J</th>
-                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Padam</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {staffData.length > 0 ? staffData.map((s, i) => (
-                      <tr key={i} className={`hover:bg-slate-50/50 transition-colors ${!s.hasSubmitted ? 'bg-red-50/10' : ''}`}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <UserCircle size={24} className="text-slate-300" />
-                            <div>
-                               <p className={`font-bold text-[11px] ${!s.hasSubmitted ? 'text-red-700' : 'text-slate-800'}`}>{s.name}</p>
-                               <p className="text-[8px] text-blue-500 font-bold uppercase">{s.deptName}</p>
+        const App = () => {
+            const [activeView, setActiveView] = useState('jabatan'); 
+            const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
+            const [selectedDeptId, setSelectedDeptId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [submissions, setSubmissions] = useState([]);
+            const [masterList, setMasterList] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [fetchError, setFetchError] = useState(null);
+            const [showAddStaff, setShowAddStaff] = useState(false);
+
+            const normalizeName = (n) => {
+                if (!n) return "";
+                return n.toString()
+                    .toUpperCase()
+                    .replace(/\bBT\.?\b/g, 'BINTI') 
+                    .replace(/\bB\.?\b/g, 'BIN')    
+                    .replace(/[^A-Z\s]/g, '')       
+                    .replace(/\s+/g, ' ')           
+                    .trim();
+            };
+
+            const normalizeMonth = (m) => {
+                if (!m) return "";
+                const val = m.toString().toLowerCase().trim();
+                if (val.includes("jan")) return "Januari";
+                if (val.includes("feb")) return "Februari";
+                if (val.includes("mac") || val.includes("mar")) return "Mac";
+                if (val.includes("apr")) return "April";
+                if (val.includes("mei") || val.includes("may")) return "Mei";
+                if (val.includes("jun")) return "Jun";
+                if (val.includes("jul")) return "Julai";
+                if (val.includes("ogo") || val.includes("aug")) return "Ogos";
+                if (val.includes("sep")) return "September";
+                if (val.includes("okt") || val.includes("oct")) return "Oktober";
+                if (val.includes("nov")) return "November";
+                if (val.includes("dis") || val.includes("dec")) return "Disember";
+                return m;
+            };
+
+            const getFlexibleValue = (item, keywords) => {
+                const keys = Object.keys(item);
+                const targetKey = keys.find(k => {
+                    const nk = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return keywords.some(kw => nk.includes(kw.toLowerCase().replace(/[^a-z0-9]/g, '')));
+                });
+                return targetKey ? item[targetKey] : null;
+            };
+
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch(API_URL);
+                    const result = await res.json();
+                    
+                    const formattedSubmissions = (result.submissions || []).map(item => ({
+                        name: normalizeName(getFlexibleValue(item, ["NAMA", "PEGAWAI", "NAME"])),
+                        deptName: (getFlexibleValue(item, ["JABATAN", "UNIT", "SEKSYEN", "DEPARTMENT"]) || "").toString().toUpperCase().trim(),
+                        month: normalizeMonth(getFlexibleValue(item, ["BULAN", "MONTH"])),
+                        hours: parseFloat(getFlexibleValue(item, ["JAM", "BERKURSUS", "HOURS"])) || 0,
+                        cpd: parseFloat(getFlexibleValue(item, ["CPD", "MATA", "POINTS"])) || 0
+                    }));
+
+                    const formattedStaff = (result.staffList || []).map(item => ({
+                        name: normalizeName(item["Nama"] || item["name"]),
+                        deptId: item["JabatanID"] || item["deptId"]
+                    }));
+
+                    setSubmissions(formattedSubmissions);
+                    setMasterList(formattedStaff);
+                    setFetchError(null);
+                } catch (e) {
+                    setFetchError("Gagal menarik data. Pastikan URL Apps Script betul.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => { fetchData(); }, []);
+
+            const complianceData = useMemo(() => {
+                const data = DEPARTMENTS.map(dept => {
+                    const namesInSheet = submissions.filter(s => 
+                        s.deptName.includes(dept.name.toUpperCase()) || dept.name.toUpperCase().includes(s.deptName)
+                    ).map(s => s.name);
+                    
+                    const namesInMaster = masterList.filter(s => s.deptId === dept.id).map(s => s.name);
+                    const allUnique = [...new Set([...namesInSheet, ...namesInMaster])];
+                    const totalDenominator = allUnique.length;
+
+                    const submittedInMonth = allUnique.filter(name => 
+                        submissions.some(s => s.name === name && s.month === selectedMonth)
+                    ).length;
+
+                    const pct = totalDenominator > 0 ? Math.round((submittedInMonth / totalDenominator) * 100) : 0;
+                    return { ...dept, count: submittedInMonth, total: totalDenominator, percentage: pct, status: totalDenominator === 0 ? 'Tiada Data' : (submittedInMonth === 0 ? 'Belum Isi' : 'Selesai') };
+                }).sort((a,b) => b.percentage - a.percentage);
+
+                if (activeView === 'jabatan' && !selectedDeptId && searchTerm) {
+                    return data.filter(d => d.name.includes(searchTerm.toUpperCase()));
+                }
+                return data;
+            }, [selectedMonth, submissions, masterList, activeView, selectedDeptId, searchTerm]);
+
+            const staffData = useMemo(() => {
+                const deptObj = DEPARTMENTS.find(d => d.id === selectedDeptId);
+                const relevantNames = [...new Set([
+                    ...submissions.filter(s => !selectedDeptId || s.deptName.includes(deptObj?.name || "") || (deptObj?.name && deptObj.name.includes(s.deptName))).map(s => s.name),
+                    ...masterList.filter(m => !selectedDeptId || m.deptId === selectedDeptId).map(m => m.name)
+                ])];
+
+                return relevantNames.map(name => {
+                    const subs = submissions.filter(s => s.name === name);
+                    const master = masterList.find(s => s.name === name);
+                    return {
+                        name,
+                        dept: master ? DEPARTMENTS.find(d => d.id === master.deptId)?.name : (subs[0]?.deptName || "UNIT LUAR"),
+                        hasMonth: subs.some(s => s.month === selectedMonth),
+                        totalHrs: subs.reduce((a,b) => a + b.hours, 0),
+                        cpd: subs.reduce((a,b) => a + b.cpd, 0)
+                    };
+                })
+                .filter(s => s.name.includes(searchTerm.toUpperCase()))
+                // AUTO SORT IKUT ALPHABET (A-Z)
+                .sort((a, b) => a.name.localeCompare(b.name));
+            }, [selectedDeptId, selectedMonth, searchTerm, submissions, masterList]);
+
+            const handleAdd = async (e) => {
+                e.preventDefault();
+                const name = normalizeName(e.target.name.value);
+                const deptId = e.target.deptId.value;
+                setShowAddStaff(false);
+                setLoading(true);
+                try {
+                    await fetch(API_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ action: 'add', name, deptId }),
+                        headers: { 'Content-Type': 'text/plain' }
+                    });
+                    fetchData();
+                } catch (e) { alert("Ralat semasa menambah."); setLoading(false); }
+            };
+
+            const handleDelete = async (name) => {
+                if(!confirm(`Padam ${name} secara kekal?`)) return;
+                setLoading(true);
+                try {
+                    await fetch(API_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ action: 'delete', name }),
+                        headers: { 'Content-Type': 'text/plain' }
+                    });
+                    fetchData();
+                } catch (err) { alert("Ralat semasa memadam."); setLoading(false); }
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 p-3 shadow-sm">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-blue-700 p-2 rounded-lg text-white shadow-lg"><Icon name="award" className="w-5 h-5" /></div>
+                                <div><h1 className="text-sm font-black uppercase tracking-tight leading-none">40J & MyCPD LIVE</h1><p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest mt-1">v4.5 Alphabet Sort</p></div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase inline-flex items-center gap-1 ${s.hasSubmitted ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                            {s.hasSubmitted ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
-                            {s.hasSubmitted ? 'Selesai' : 'Belum'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center font-black text-[11px] text-blue-700">{s.yearlyTotal}</td>
-                        <td className="px-4 py-3 text-center font-black text-[11px] text-amber-600">{s.cpdPoints}</td>
-                        <td className="px-4 py-3">
-                           <div className="w-16 bg-slate-100 h-1 rounded-full mx-auto overflow-hidden">
-                              <div className={`h-full transition-all duration-1000 ${s.yearlyTotal >= 40 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{width: `${Math.min(100, (s.yearlyTotal/40)*100)}%`}}></div>
-                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button onClick={() => handleDeleteStaff(s.name)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan="6" className="py-20 text-center text-slate-400 font-bold uppercase text-[10px] italic tracking-widest">Tiada rekod ditemui.</td>
-                      </tr>
+                            <div className="flex bg-slate-100 p-1 rounded-lg scale-90 border">
+                                <button onClick={() => {setActiveView('jabatan'); setSelectedDeptId(null); setSearchTerm('');}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'jabatan' && !selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Jabatan</button>
+                                <button onClick={() => {setActiveView('individu'); setSelectedDeptId(null); setSearchTerm('');}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'individu' || selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Individu</button>
+                            </div>
+                            <div className="flex items-center gap-2 scale-90">
+                                <button onClick={() => setShowAddStaff(true)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 shadow-md active:scale-95 transition-all"><Icon name="plus"/> Tambah Pegawai</button>
+                                <button onClick={fetchData} className="p-1.5 bg-white border rounded-lg active:scale-95 transition-all"><Icon name="refresh" className={loading ? "animate-spin" : ""}/></button>
+                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border rounded-lg text-[9px] font-bold p-1.5 outline-none">{MONTHS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-4 py-6">
+                        {fetchError && <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs font-bold rounded-xl flex items-center gap-2 animate-pulse"><Icon name="alert" /> {fetchError}</div>}
+                        
+                        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                                {selectedDeptId && <button onClick={() => {setSelectedDeptId(null); setSearchTerm('');}} className="p-1.5 bg-white border rounded-full hover:bg-slate-50 transition-all"><Icon name="arrowLeft"/></button>}
+                                <h2 className="text-sm font-black uppercase text-slate-700">
+                                    {selectedDeptId ? DEPARTMENTS.find(d => d.id === selectedDeptId).name : (activeView === 'jabatan' ? 'Cari Jabatan' : 'Cari Individu')}
+                                </h2>
+                            </div>
+                            <div className="w-full md:w-80">
+                                <input 
+                                    type="text" 
+                                    placeholder={activeView === 'jabatan' && !selectedDeptId ? "Taip nama jabatan..." : "Taip nama pegawai..."} 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-[11px] outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 uppercase font-bold transition-all shadow-sm" 
+                                />
+                            </div>
+                        </div>
+
+                        {activeView === 'jabatan' && !selectedDeptId ? (
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-in fade-in duration-500">
+                                {complianceData.length > 0 ? complianceData.map(dept => (
+                                    <button key={dept.id} onClick={() => {setSelectedDeptId(dept.id); setSearchTerm('');}} className="text-left p-2.5 rounded-xl border bg-white hover:border-blue-400 transition-all group shadow-sm flex flex-col justify-between h-[90px]">
+                                        <h4 className="font-bold text-[9px] mb-1.5 h-6 line-clamp-2 uppercase leading-tight text-slate-600">{dept.name}</h4>
+                                        <div className="flex justify-between items-end">
+                                            <div className="flex-1">
+                                                <p className="text-[8px] font-black text-blue-600 uppercase mb-0.5">{dept.count}/{dept.total}</p>
+                                                <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden"><div className="bg-blue-600 h-full" style={{width: `${dept.percentage}%`}}></div></div>
+                                            </div>
+                                            <PieChart percentage={dept.percentage} />
+                                        </div>
+                                    </button>
+                                )) : (
+                                    <div className="col-span-full py-10 text-center text-slate-400 font-bold uppercase text-[10px]">Tiada jabatan ditemui.</div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+                                <table className="w-full text-left text-[10px]">
+                                    <thead className="bg-slate-50 border-b">
+                                        <tr><th className="px-4 py-2 font-bold uppercase tracking-widest text-slate-500">Pegawai</th><th className="px-4 py-2 font-bold uppercase text-center tracking-widest text-slate-500">Status {selectedMonth}</th><th className="px-4 py-2 font-bold uppercase text-center tracking-widest text-slate-500">Jam</th><th className="px-4 py-2 font-bold uppercase text-center tracking-widest text-slate-500">CPD</th><th className="px-4 py-2 font-bold uppercase text-center tracking-widest text-slate-500">KPI 40J</th><th className="px-4 py-2 font-bold uppercase text-center tracking-widest text-slate-500">Padam</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {staffData.length > 0 ? staffData.map((s, i) => (
+                                            <tr key={i} className={!s.hasMonth ? 'bg-red-50/20' : 'hover:bg-slate-50 transition-colors'}>
+                                                <td className="px-4 py-3"><div className="flex items-center gap-2"><Icon name="user" className="text-slate-300 w-5 h-5"/><div><p className={`font-bold ${!s.hasMonth ? 'text-red-700' : 'text-slate-800'}`}>{s.name}</p><p className="text-[8px] text-blue-500 font-bold uppercase">{s.dept}</p></div></div></td>
+                                                <td className="px-4 py-3 text-center"><span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${s.hasMonth ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{s.hasMonth ? <Icon name="check" className="w-2 h-2 inline mr-1"/> : <Icon name="alert" className="w-2 h-2 inline mr-1"/>} {s.hasMonth ? 'Selesai' : 'Belum'}</span></td>
+                                                <td className="px-4 py-3 text-center font-bold text-blue-700">{s.totalHrs}</td>
+                                                <td className="px-4 py-3 text-center font-bold text-amber-600">{s.cpd}</td>
+                                                <td className="px-4 py-3"><div className="w-12 bg-slate-100 h-1 rounded-full mx-auto overflow-hidden"><div className={`h-full transition-all duration-1000 ${s.totalHrs >= 40 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{width: `${Math.min(100, (s.totalHrs/40)*100)}%`}}></div></div></td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button 
+                                                        onClick={() => handleDelete(s.name)} 
+                                                        className="p-1.5 bg-red-50 text-red-500 hover:bg-red-600 hover:text-white rounded-lg transition-all shadow-sm border border-red-100 flex items-center justify-center mx-auto"
+                                                        title="Padam Pegawai"
+                                                    >
+                                                        <Icon name="trash" className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan="6" className="py-10 text-center text-slate-400 font-bold uppercase text-[10px]">Tiada data pegawai ditemui.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </main>
+
+                    {showAddStaff && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all">
+                            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden scale-in">
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-50 text-slate-800 font-black">
+                                    <h3 className="text-[10px] uppercase">Daftar Pegawai</h3>
+                                    <button onClick={() => setShowAddStaff(false)} className="p-1 hover:bg-red-100 text-red-500 rounded-full transition-all"><Icon name="x"/></button>
+                                </div>
+                                <form onSubmit={handleAdd} className="p-5 space-y-4">
+                                    <div><label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Nama Penuh</label><input name="name" type="text" placeholder="NAMA HURUF BESAR" className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold uppercase outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm" required /></div>
+                                    <div><label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Jabatan / Unit</label><select name="deptId" className="w-full border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold outline-none focus:ring-4 focus:ring-blue-500/10 cursor-pointer shadow-sm" required><option value="">Pilih Jabatan...</option>{DEPARTMENTS.sort((a,b)=>a.name.localeCompare(b.name)).map(d=>(<option key={d.id} value={d.id}>{d.name}</option>))}</select></div>
+                                    <button type="submit" className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">Simpan Pegawai</button>
+                                </form>
+                            </div>
+                        </div>
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
+                </div>
+            );
+        };
 
-      {showAddStaff && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden scale-in">
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-              <h3 className="font-black text-[10px] uppercase text-slate-700">Pendaftaran Pegawai</h3>
-              <button onClick={() => setShowAddStaff(false)} className="p-1 hover:bg-red-100 text-red-500 rounded-full transition-all"><X size={16} /></button>
-            </div>
-            <form onSubmit={handleAddStaff} className="p-4 space-y-4">
-              <div>
-                <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Nama Penuh (Huruf Besar)</label>
-                <input 
-                  type="text" 
-                  value={newStaff.name} 
-                  onChange={(e) => setNewStaff({...newStaff, name: e.target.value})} 
-                  placeholder="CONTOH: NURUL ASHIKIN" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-bold uppercase outline-none focus:ring-4 focus:ring-blue-500/10 transition-all" 
-                  required 
-                />
-              </div>
-              <div>
-                <label className="text-[8px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Jabatan / Seksyen</label>
-                <select 
-                  value={newStaff.deptId} 
-                  onChange={(e) => setNewStaff({...newStaff, deptId: e.target.value})} 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer" 
-                  required
-                >
-                  <option value="">Pilih Jabatan...</option>
-                  {DEPARTMENTS.sort((a,b)=>a.name.localeCompare(b.name)).map(d=>(<option key={d.id} value={d.id}>{d.name}</option>))}
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-blue-600 text-white font-black py-3 rounded-xl shadow-lg hover:bg-blue-700 transition-all uppercase text-[10px] tracking-widest active:scale-95">Simpan Data</button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
