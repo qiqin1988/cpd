@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pemantauan Kursus 40 Jam & MyCPD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .animate-pulse-red { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        .pie-chart {
+            transform: rotate(-90deg);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root">
+        <!-- Paparan fallback sekiranya JS gagal loading -->
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center p-8 bg-white rounded-3xl shadow-xl">
+                <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-slate-500 font-bold">Memulakan Sistem Dashboard...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, query, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.FirebaseSDK = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, collection, doc, setDoc, onSnapshot, query, getDoc };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const API_URL = "https://script.google.com/macros/s/AKfycby7kvUIWUbV028xsMULmyvHVFSEJjF5CumapdoZu9XF9wVU91R-92RQMaRJyOmKdsPMiA/exec"; 
+
+        const DEPARTMENTS = [
+            { id: 'perubatan_am', name: 'JABATAN PERUBATAN AM', staffCount: 40 },
+            { id: 'perubatan_respiratori', name: 'JABATAN PERUBATAN RESPIRATORI', staffCount: 15 },
+            { id: 'kardiologi', name: 'JABATAN KARDIOLOGI', staffCount: 20 },
+            { id: 'onkologi', name: 'JABATAN ONKOLOGI & RADIOTERAPI', staffCount: 15 },
+            { id: 'phlebotomy', name: 'UNIT PHLEBOTOMY', staffCount: 10 },
+            { id: 'psikiatri', name: 'JABATAN PSIKIATRI & KESIHATAN MENTAL', staffCount: 20 },
+            { id: 'dermatologi', name: 'JABATAN DERMATOLOGI', staffCount: 8 },
+            { id: 'pembedahan_am', name: 'JABATAN PEMBEDAHAN AM', staffCount: 30 },
+            { id: 'ortopedik', name: 'JABATAN ORTOPEDIK', staffCount: 25 },
+            { id: 'oftalmologi', name: 'JABATAN OFTALMOLOGI', staffCount: 15 },
+            { id: 'ent', name: 'JABATAN OTORINOLARINGOLONGI ( ENT )', staffCount: 12 },
+            { id: 'plastik', name: 'JABATAN PEMBEDAHAN PLASTIK & REKONSTRUKTIF', staffCount: 10 },
+            { id: 'kardiothoraksik', name: 'JABATAN PEMBEDAHAN KARDIOTHORASIK', staffCount: 18 },
+            { id: 'neurosurgery', name: 'JABATAN NEUROSURGERI', staffCount: 12 },
+            { id: 'urologi', name: 'JABATAN UROLOGI', staffCount: 10 },
+            { id: 'anestesi', name: 'JABATAN ANESTESIOLOGI & RAWATAN RAPI', staffCount: 40 },
+            { id: 'kecemasan', name: 'JABATAN KECEMASAN', staffCount: 60 },
+            { id: 'ong', name: 'JABATAN OBSTETRIK & GINEKOLOGI', staffCount: 35 },
+            { id: 'pediatrik', name: 'JABATAN PEDIATRIK', staffCount: 30 },
+            { id: 'pediatrik_kardio', name: 'JABATAN PEDIATRIK KARDIOLOGI', staffCount: 10 },
+            { id: 'patologi', name: 'JABATAN PATOLOGI', staffCount: 25 },
+            { id: 'radiologi', name: 'JABATAN RADIOLOGI', staffCount: 20 },
+            { id: 'transfusi', name: 'JABATAN PERUBATAN TRANFUSI', staffCount: 15 },
+            { id: 'forensik', name: 'JABATAN PERUBATAN FORENSIK', staffCount: 8 },
+            { id: 'nuklear', name: 'JABATAN PERUBATAN NUKLEAR', staffCount: 8 },
+            { id: 'farmasi', name: 'JABATAN FARMASI', staffCount: 45 },
+            { id: 'dietetik', name: 'JABATAN DIETETIK & SAJIAN', staffCount: 20 },
+            { id: 'kerja_sosial', name: 'JABATAN KERJA PERUBATAN SOSIAL', staffCount: 10 },
+            { id: 'rekod', name: 'JABATAN REKOD PERUBATAN', staffCount: 20 },
+            { id: 'rehabilitasi', name: 'JABATAN REHABILITASI', staffCount: 15 },
+            { id: 'hr', name: 'SEKSYEN SUMBER MANUSIA', staffCount: 12 },
+            { id: 'khidmat_pengurusan', name: 'SEKSYEN KHIDMAT PENGURUSAN', staffCount: 15 },
+            { id: 'perolehan', name: 'SEKSYEN PEROLEHAN', staffCount: 10 },
+            { id: 'kewangan', name: 'SEKSYEN KEWANGAN', staffCount: 12 },
+            { id: 'pembangunan', name: 'SEKSYEN PEMBANGUNAN', staffCount: 10 },
+            { id: 'keselamatan', name: 'UNIT KESELAMATAN', staffCount: 20 },
+            { id: 'korporat', name: 'UNIT KOMUNIKASI KORPORAT', staffCount: 6 },
+            { id: 'aset', name: 'UNIT PENGURUSAN ASET', staffCount: 8 },
+            { id: 'perpustakaan', name: 'UNIT PERPUSTAKAAN', staffCount: 4 },
+            { id: 'it', name: 'UNIT TEKNOLOGI MAKLUMAT', staffCount: 10 },
+            { id: 'kejuruteraan', name: 'UNIT KEJURUTERAAN & OPERASI', staffCount: 15 },
+            { id: 'kualiti', name: 'UNIT KUALITI', staffCount: 8 },
+            { id: 'neurologi_unit', name: 'JABATAN NEUROLOGI', staffCount: 15 },
+            { id: 'nefrologi', name: 'JABATAN NEFROLOGI', staffCount: 15 },
+            { id: 'kluster', name: 'UNIT KLUSTER', staffCount: 6 },
+            { id: 'crc', name: 'PUSAT PENYELIDIKAN KLINIKAL (CRC)', staffCount: 8 },
+            { id: 'infeksi', name: 'UNIT KAWALAN INFEKSI', staffCount: 10 },
+            { id: 'kejururawatan', name: 'UNIT KEJURURAWATAN', staffCount: 150 },
+            { id: 'ppp', name: 'UNIT PENYELIA PPP', staffCount: 25 },
+            { id: 'medicolegal', name: 'UNIT MEDICOLEGAL', staffCount: 5 },
+            { id: 'osh', name: 'JABATAN PERUBATAN DAN KESIHATAN PEKERJAAN', staffCount: 10 },
+            { id: 'pengarah', name: 'PEJABAT PENGARAH', staffCount: 12 },
+            { id: 'islam', name: 'UNIT HAL EHWAL ISLAM', staffCount: 6 },
+            { id: 'genetik', name: 'JABATAN GENETIK', staffCount: 10 },
+            { id: 'jangkitan', name: 'UNIT KAWALAN PENYAKIT BERJANGKIT', staffCount: 10 },
+            { id: 'rheumatologi', name: 'UNIT RHEUMATOLOGI', staffCount: 8 },
+            { id: 'hematologi', name: 'UNIT HEMATOLOGI', staffCount: 8 },
+            { id: 'endokrin', name: 'UNIT ENDOKRIN', staffCount: 8 },
+            { id: 'gastro', name: 'UNIT GASTROENTEROLOGI & HEPATOLOGI', staffCount: 10 },
+            { id: 'fisioterapi', name: 'UNIT FISIOTERAPI', staffCount: 15 },
+            { id: 'carakerja', name: 'UNIT CARAKERJA', staffCount: 15 },
+        ];
+
+        const MONTHS = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const icons = {
+                dashboard: <path d="M3 3h7v9H3V3zm11 0h7v5h-7V3zm0 9h7v9h-7v-9zM3 16h7v5H3v-5z"/>,
+                award: <path d="M12 15l-2 5l2 2l2-2l-2-5zm0-13a6 6 0 1 0 0 12a6 6 0 0 0 0-12zm0 10a4 4 0 1 1 0-8a4 4 0 0 1 0 8z"/>,
+                users: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m7-10a4 4 0 1 0 0-8a4 4 0 0 0 0 8m14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>,
+                plus: <path d="M12 5v14m-7-7h14"/>,
+                refresh: <path d="M21 12a9 9 0 0 0-9-9a9.75 9.75 0 0 0-6.74 2.74L3 8m0 0V3m0 5h5m-5 4a9 9 0 0 0 9 9a9.75 9.75 0 0 0 6.74-2.74L21 16m0 0v5m0-5h-5"/>,
+                alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>,
+                check: <polyline points="20 6 9 17 4 12"/>,
+                user: <g><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>,
+                arrowLeft: <path d="M19 12H5m7-7l-7 7l7 7"/>,
+                chevronRight: <path d="M9 18l6-6l-6-6"/>,
+                search: <g><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></g>,
+                x: <g><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const PieChart = ({ percentage, size = 40 }) => {
+            const strokeWidth = 8;
+            const radius = (size - strokeWidth) / 2;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            const color = percentage === 0 ? 'stroke-red-200' : percentage < 50 ? 'stroke-amber-500' : 'stroke-emerald-500';
+
+            return (
+                <div className="relative inline-flex items-center justify-center">
+                    <svg width={size} height={size} className="pie-chart">
+                        <circle className="stroke-slate-100" strokeWidth={strokeWidth} fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                        <circle className={`${color} transition-all duration-1000 ease-out`} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" r={radius} cx={size / 2} cy={size / 2} />
+                    </svg>
+                    <span className="absolute text-[10px] font-black text-slate-700">{percentage}%</span>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeView, setActiveView] = useState('jabatan'); 
+            const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
+            const [selectedDeptId, setSelectedDeptId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [submissions, setSubmissions] = useState([]);
+            const [masterList, setMasterList] = useState([]);
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [fetchError, setFetchError] = useState(null);
+            const [showAddStaff, setShowAddStaff] = useState(false);
+
+            // Logik keselamatan sekiranya __firebase_config tiada
+            let firebaseConfig = {};
+            try {
+                firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            } catch (e) {
+                console.error("Firebase config parse error", e);
+            }
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'dashboard-40j';
+
+            useEffect(() => {
+                const initFirebase = async () => {
+                    if (!window.FirebaseSDK || Object.keys(firebaseConfig).length === 0) {
+                        setFetchError("Sistem belum dikonfigurasi dengan betul (Firebase Missing).");
+                        return;
+                    }
+                    const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore } = window.FirebaseSDK;
+                    
+                    try {
+                        const app = initializeApp(firebaseConfig);
+                        const auth = getAuth(app);
+
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+
+                        const unsubscribe = onAuthStateChanged(auth, setUser);
+                        return () => unsubscribe();
+                    } catch (err) {
+                        setFetchError("Ralat semasa menyambung ke Firebase: " + err.message);
+                    }
+                };
+                
+                // Beri masa untuk SDK loading
+                const timer = setTimeout(initFirebase, 500);
+                return () => clearTimeout(timer);
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const { getFirestore, collection, onSnapshot, query } = window.FirebaseSDK;
+                const db = getFirestore();
+                const staffCol = collection(db, 'artifacts', appId, 'public', 'data', 'staff');
+                
+                const unsubscribe = onSnapshot(query(staffCol), (snapshot) => {
+                    const cloudStaff = snapshot.docs.map(doc => doc.data());
+                    const defaultStaff = [
+                        { name: "NURUL ASHIKIN BINTI YUSOF", deptId: "hr" },
+                        { name: "AHMAD SANI BIN BAKRI", deptId: "farmasi" },
+                    ];
+                    // Gabungkan dan elakkan duplikasi nama
+                    const combined = [...defaultStaff];
+                    cloudStaff.forEach(cs => {
+                        if (!combined.find(s => s.name === cs.name)) combined.push(cs);
+                    });
+                    setMasterList(combined);
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                });
+
+                return () => unsubscribe();
+            }, [user]);
+
+            const normalizeName = (name) => {
+                if (!name) return "";
+                return name.toString().toUpperCase()
+                    .replace(/[\.\,]/g, ' ')
+                    .replace(/\bBT\b/g, 'BINTI')
+                    .replace(/\bB\b/g, 'BIN')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            const normalizeMonth = (bulan) => {
+                if (!bulan) return "";
+                const b = bulan.toString().toLowerCase().trim();
+                if (b.includes('jan')) return 'Januari';
+                if (b.includes('feb')) return 'Februari';
+                if (b.includes('mac') || b.includes('mar')) return 'Mac';
+                if (b.includes('apr')) return 'April';
+                if (b.includes('mei') || b.includes('may')) return 'Mei';
+                if (b.includes('jun')) return 'Jun';
+                if (b.includes('jul')) return 'Julai';
+                if (b.includes('ogo') || b.includes('aug')) return 'Ogos';
+                if (b.includes('sep')) return 'September';
+                if (b.includes('okt') || b.includes('oct')) return 'Oktober';
+                if (b.includes('nov')) return 'November';
+                if (b.includes('dis') || b.includes('dec')) return 'Disember';
+                return bulan;
+            };
+
+            const getFlexibleValue = (item, keyword) => {
+                const keys = Object.keys(item);
+                const targetKey = keys.find(k => {
+                    const nk = k.toLowerCase().replace(/\s/g, '');
+                    const kw = keyword.toLowerCase().replace(/\s/g, '');
+                    return nk.includes(kw);
+                });
+                return targetKey ? item[targetKey] : null;
+            };
+
+            const fetchData = async () => {
+                if (!API_URL) return;
+                setLoading(true);
+                setFetchError(null);
+                try {
+                    const response = await fetch(API_URL);
+                    const data = await response.json();
+                    
+                    const formattedData = data.map((item, index) => {
+                        // Pengesanan jam dan nama yang sangat fleksibel (khusus untuk kes Nurul Ashikin)
+                        const jamValue = getFlexibleValue(item, "Jam") || getFlexibleValue(item, "Berkursus") || 0;
+                        const cpdValue = getFlexibleValue(item, "CPD") || 0;
+                        const bulanValue = getFlexibleValue(item, "Bulan") || "";
+                        const namaValue = getFlexibleValue(item, "NAMA") || getFlexibleValue(item, "Pegawai") || "Tiada Nama";
+                        const jabatanValue = getFlexibleValue(item, "Jabatan") || getFlexibleValue(item, "Seksyen") || "N/A";
+
+                        return {
+                            id: `P${index}`,
+                            name: normalizeName(namaValue),
+                            deptName: jabatanValue.toString().toUpperCase().trim(),
+                            month: normalizeMonth(bulanValue),
+                            cpdPoints: parseFloat(cpdValue) || 0,
+                            hours: parseFloat(jamValue) || 0
+                        };
+                    });
+                    setSubmissions(formattedData);
+                } catch (err) {
+                    setFetchError("Gagal menarik data live: " + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => { fetchData(); }, []);
+
+            const complianceData = useMemo(() => {
+                return DEPARTMENTS.map(dept => {
+                    const deptSubmissions = submissions.filter(s => 
+                        s.deptName.includes(dept.name.toUpperCase().trim()) && s.month === selectedMonth
+                    );
+                    const percentage = Math.min(100, Math.round((deptSubmissions.length / dept.staffCount) * 100));
+                    return { ...dept, status: deptSubmissions.length > 0 ? 'Selesai' : 'Belum Isi', percentage, submissionCount: deptSubmissions.length };
+                }).sort((a,b) => b.percentage - a.percentage);
+            }, [selectedMonth, submissions]);
+
+            const staffData = useMemo(() => {
+                const currentDeptObj = DEPARTMENTS.find(d => d.id === selectedDeptId);
+                const currentDeptName = currentDeptObj?.name.toUpperCase().trim() || "";
+
+                const masterNamesInDept = masterList
+                    .filter(s => !selectedDeptId || s.deptId === selectedDeptId)
+                    .map(s => s.name);
+                
+                const submitNamesInDept = submissions
+                    .filter(s => !selectedDeptId || s.deptName.includes(currentDeptName))
+                    .map(s => s.name);
+                
+                const allRelevantNames = [...new Set([...masterNamesInDept, ...submitNamesInDept])];
+                
+                return allRelevantNames.map(name => {
+                    const staffSubs = submissions.filter(s => s.name === name);
+                    const monthSub = staffSubs.find(s => s.month === selectedMonth);
+                    const yearlyTotalHours = staffSubs.reduce((sum, curr) => sum + curr.hours, 0);
+                    const yearlyTotalCPD = staffSubs.reduce((sum, curr) => sum + curr.cpdPoints, 0);
+                    const monthsFilled = [...new Set(staffSubs.map(s => s.month))].sort().join(', ');
+                    const masterInfo = masterList.find(s => s.name === name);
+
+                    return { 
+                        name, 
+                        deptName: masterInfo ? DEPARTMENTS.find(d => d.id === masterInfo.deptId)?.name : (staffSubs[0]?.deptName || "UNIT LUAR"), 
+                        yearlyTotal: yearlyTotalHours, 
+                        hasSubmitted: !!monthSub, 
+                        monthsFilled: monthsFilled || "Tiada Rekod",
+                        cpdPoints: yearlyTotalCPD 
+                    };
+                }).filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }, [selectedDeptId, selectedMonth, searchTerm, submissions, masterList]);
+
+            const handleAddStaff = async (e) => {
+                e.preventDefault();
+                if (!user) return;
+                const { getFirestore, doc, setDoc } = window.FirebaseSDK;
+                const db = getFirestore();
+                const name = e.target.name.value;
+                const deptId = e.target.deptId.value;
+                const normalized = normalizeName(name);
+
+                if (normalized && deptId) {
+                    try {
+                        const staffDoc = doc(db, 'artifacts', appId, 'public', 'data', 'staff', normalized);
+                        await setDoc(staffDoc, { name: normalized, deptId });
+                        setShowAddStaff(false);
+                    } catch (err) {
+                        console.error("Save error", err);
+                    }
+                }
+            };
+
+            return (
+                <div className="min-h-screen text-slate-900 pb-10">
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm px-4 py-3">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-700 p-2 rounded-xl text-white shadow-lg shadow-blue-100">
+                                    <Icon name="award" className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-black text-slate-800 leading-none">40J & MyCPD</h1>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">PEMANTAUAN LIVE</p>
+                                </div>
+                            </div>
+                            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                <button onClick={() => {setActiveView('jabatan'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'jabatan' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500'}`}>Jabatan</button>
+                                <button onClick={() => {setActiveView('individu'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-lg text-xs font-bold transition-all ${activeView === 'individu' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500'}`}>Individu</button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setShowAddStaff(true)} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md"><Icon name="plus" className="w-3 h-3" /> <span className="hidden sm:inline">Tambah Pegawai</span></button>
+                                <button onClick={fetchData} disabled={loading} className="p-2 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all active:scale-95"><Icon name="refresh" className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /></button>
+                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="appearance-none bg-white border border-slate-200 rounded-xl text-[10px] font-bold px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer">{MONTHS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-4 py-6">
+                        {!user && !fetchError && <div className="mb-6 p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl flex items-center gap-3 font-bold text-xs"><Icon name="refresh" className="animate-spin w-4 h-4" />Menyambung ke Pangkalan Data Awan...</div>}
+                        {fetchError && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-center gap-3 font-bold text-sm"><Icon name="alert" className="w-5 h-5" />{fetchError}</div>}
+
+                        {activeView === 'jabatan' && !selectedDeptId ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                {complianceData.map(dept => (
+                                    <button key={dept.id} onClick={() => setSelectedDeptId(dept.id)} className={`text-left p-3 rounded-xl border bg-white transition-all hover:shadow-md hover:border-blue-300 flex items-center justify-between group ${dept.status === 'Belum Isi' ? 'border-slate-100' : 'border-slate-200'}`}>
+                                        <div className="flex-1 min-w-0 pr-3">
+                                            <h4 className="font-bold text-xs text-slate-800 leading-tight truncate mb-1" title={dept.name}>{dept.name}</h4>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${dept.status === 'Belum Isi' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>{dept.status}</span>
+                                                <span className="text-[9px] font-bold text-slate-400">{dept.submissionCount}/{dept.staffCount} Staf</span>
+                                            </div>
+                                        </div>
+                                        <PieChart percentage={dept.percentage} />
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        {selectedDeptId && <button onClick={() => {setSelectedDeptId(null); setSearchTerm('');}} className="p-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 shadow-sm transition-all active:scale-90"><Icon name="arrowLeft" className="w-4 h-4" /></button>}
+                                        <div><h2 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-1">{selectedDeptId ? DEPARTMENTS.find(d => d.id === selectedDeptId).name : 'Pangkalan Data Individu'}</h2><p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{selectedMonth}</p></div>
+                                    </div>
+                                    <div className="relative w-full md:w-80"><Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" /><input type="text" placeholder="Cari nama..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs outline-none focus:ring-4 focus:ring-blue-600/10 shadow-sm transition-all" /></div>
+                                </div>
+
+                                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 border-b border-slate-100">
+                                                <tr>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Maklumat Pegawai</th>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Rekod</th>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Jam</th>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">CPD</th>
+                                                    <th className="px-5 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">KPI 40J</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {staffData.length > 0 ? staffData.map((staff, idx) => (
+                                                    <tr key={idx} className={`hover:bg-slate-50/50 transition-colors group ${!staff.hasSubmitted ? 'bg-red-50/20' : ''}`}>
+                                                        <td className="px-5 py-3 flex items-center gap-3"><div className={`w-8 h-8 rounded-full flex items-center justify-center ${!staff.hasSubmitted ? 'bg-red-100 text-red-400' : 'bg-slate-100 text-slate-400'}`}><Icon name="user" className="w-4 h-4" /></div><div><p className={`font-bold text-xs mb-0.5 ${!staff.hasSubmitted ? 'text-red-700' : 'text-slate-800'}`}>{staff.name}</p><p className="text-[9px] text-blue-600 font-bold uppercase">{staff.deptName}</p></div></td>
+                                                        <td className="px-5 py-3 text-center"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${staff.hasSubmitted ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700 animate-pulse-red'}`}>{staff.hasSubmitted ? <Icon name="check" className="w-2.5 h-2.5"/> : <Icon name="alert" className="w-2.5 h-2.5"/>} {staff.hasSubmitted ? 'Selesai' : 'Belum Isi'}</span></td>
+                                                        <td className="px-5 py-3 text-center"><p className="text-[9px] font-bold text-slate-500 truncate max-w-[100px]" title={staff.monthsFilled}>{staff.monthsFilled}</p></td>
+                                                        <td className="px-5 py-3 text-center font-black text-xs text-blue-700">{staff.yearlyTotal}</td>
+                                                        <td className="px-5 py-3 text-center font-black text-xs text-amber-600">{staff.cpdPoints}</td>
+                                                        <td className="px-5 py-3"><div className="max-w-[80px] mx-auto"><div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-1"><div className={`h-full transition-all duration-1000 ${staff.yearlyTotal >= 40 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, (staff.yearlyTotal / 40) * 100)}%` }}></div></div><p className="text-[8px] font-black text-slate-400 text-right uppercase">{Math.round((staff.yearlyTotal / 40) * 100)}%</p></div></td>
+                                                    </tr>
+                                                )) : <tr><td colSpan="6" className="px-5 py-12 text-center text-slate-400 font-bold uppercase text-[10px] italic">Tiada rekod ditemui.</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {showAddStaff && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">Pendaftaran Pegawai</h3><button onClick={() => setShowAddStaff(false)} className="p-1.5 hover:bg-red-50 hover:text-red-600 rounded-full transition-colors"><Icon name="x" className="w-4 h-4" /></button></div>
+                                <form onSubmit={handleAddStaff} className="p-5 space-y-4">
+                                    <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nama Penuh</label><input name="name" type="text" placeholder="NAMA HURUF BESAR" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-blue-500" required /></div>
+                                    <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Jabatan / Unit</label><select name="deptId" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500" required><option value="">Pilih Jabatan...</option>{DEPARTMENTS.sort((a,b) => a.name.localeCompare(b.name)).map(d => (<option key={d.id} value={d.id}>{d.name}</option>))}</select></div>
+                                    <div className="flex gap-3 pt-2">
+                                        <button type="button" onClick={() => setShowAddStaff(false)} className="flex-1 bg-slate-100 text-slate-600 font-black py-3 rounded-xl hover:bg-slate-200 transition-colors uppercase text-[10px]">BATAL</button>
+                                        <button type="submit" className="flex-[2] bg-blue-700 text-white font-black py-3 rounded-xl hover:bg-blue-800 shadow-lg flex items-center justify-center gap-2 uppercase text-[10px]">DAFTAR PEGAWAI</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
