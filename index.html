@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Pemantauan Kursus & MyCPD</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -25,7 +23,7 @@
         <div class="flex items-center justify-center min-h-screen p-8 bg-white">
             <div class="text-center">
                 <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p class="text-slate-500 font-bold text-sm uppercase tracking-widest leading-relaxed">Menyambung ke Pangkalan Data...</p>
+                <p class="text-slate-500 font-bold text-sm uppercase tracking-widest">Menyelaraskan Data Pegawai...</p>
             </div>
         </div>
     </div>
@@ -33,9 +31,6 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // ============================================================
-        // PENTING: TAMPAL URL WEB APP (/exec) ANDA DI SINI
-        // ============================================================
         const API_URL = "https://script.google.com/macros/s/AKfycbyko-n_2wSNrdKkNfAmMShiVrp_YCZCwFZa2WKnEwyWVtR1td328OWg4ojt4qljNgCDXA/exec"; 
 
         const DEPARTMENTS = [
@@ -49,9 +44,9 @@
             { id: 'pembedahan_am', name: 'JABATAN PEMBEDAHAN AM' },
             { id: 'ortopedik', name: 'JABATAN ORTOPEDIK' },
             { id: 'oftalmologi', name: 'JABATAN OFTALMOLOGI' },
-            { id: 'ent', name: 'JABATAN OTORINOLARINGOLONGI ( ENT )' },
+            { id: 'ent', name: 'JABATAN OTORINOLARINGOLOGI ( ENT )' },
             { id: 'plastik', name: 'JABATAN PEMBEDAHAN PLASTIK & REKONSTRUKTIF' },
-            { id: 'kardiothoraksik', name: 'JABATAN PEMBEDAHAN KARDIOTHORASIK' },
+            { id: 'kardiothoraksik', name: 'JABATAN PEMBEDAHAN KARDIOTORASIK' },
             { id: 'neurosurgery', name: 'JABATAN NEUROSURGERI' },
             { id: 'urologi', name: 'JABATAN UROLOGI' },
             { id: 'anestesi', name: 'JABATAN ANESTESIOLOGI & RAWATAN RAPI' },
@@ -71,7 +66,7 @@
             { id: 'rehabilitasi', name: 'JABATAN REHABILITASI' },
             { id: 'hr', name: 'SEKSYEN SUMBER MANUSIA' },
             { id: 'khidmat_pengurusan', name: 'SEKSYEN KHIDMAT PENGURUSAN' },
-            { id: 'perolehan', name: 'SEKSYEN PEROLEHAN' },
+            { id: 'perolehan', name: 'UNIT PEROLEHAN' },
             { id: 'kewangan', name: 'SEKSYEN KEWANGAN' },
             { id: 'pembangunan', name: 'SEKSYEN PEMBANGUNAN' },
             { id: 'keselamatan', name: 'UNIT KESELAMATAN' },
@@ -80,7 +75,7 @@
             { id: 'perpustakaan', name: 'UNIT PERPUSTAKAAN' },
             { id: 'it', name: 'UNIT TEKNOLOGI MAKLUMAT' },
             { id: 'kejuruteraan', name: 'UNIT KEJURUTERAAN & OPERASI' },
-            { id: 'kualiti', name: 'UNIT KUALITI' },
+            { id: 'kualiti', name: 'UNIT PENGURUSAN RISIKO DAN SURVEILAN' },
             { id: 'neurologi_unit', name: 'JABATAN NEUROLOGI' },
             { id: 'nefrologi', name: 'JABATAN NEFROLOGI' },
             { id: 'kluster', name: 'UNIT KLUSTER' },
@@ -105,15 +100,11 @@
 
         const MONTHS = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
 
-        // --- ICONS (SVG INLINE) ---
         const IconPencil = () => (
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
         );
         const IconTrash = () => (
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        );
-        const IconAward = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
         );
 
         const App = () => {
@@ -125,11 +116,26 @@
             const [masterList, setMasterList] = useState([]);
             const [loading, setLoading] = useState(true);
             const [fetchError, setFetchError] = useState(null);
-            
             const [modalType, setModalType] = useState(null); 
             const [formData, setFormData] = useState({ name: '', deptId: '', oldName: '' });
 
-            const normalizeName = (n) => n ? n.toString().toUpperCase().replace(/\s+/g, ' ').trim() : "";
+            // --- LOGIK SUPER NORMALIZATION ---
+            const normalize = (n) => {
+                if (!n) return "";
+                return n.toString().toUpperCase()
+                    .replace(/\bBT\.?\b/g, 'BINTI')
+                    .replace(/\bB\.?\b/g, 'BIN')
+                    .replace(/[^A-Z\s]/g, '') // Buang semua titik, koma, dsb
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            // Mencari nilai berdasarkan kata kunci kolum
+            const getFlexValue = (obj, keywords) => {
+                const keys = Object.keys(obj);
+                const foundKey = keys.find(k => keywords.some(kw => k.toUpperCase().includes(kw)));
+                return foundKey ? obj[foundKey] : null;
+            };
 
             const fetchData = async () => {
                 setLoading(true);
@@ -137,25 +143,20 @@
                     const response = await fetch(API_URL);
                     const result = await response.json();
                     
-                    if (result.status === "Error") throw new Error(result.message);
+                    setSubmissions((result.submissions || []).map(item => ({
+                        name: normalize(getFlexValue(item, ["NAMA", "PEGAWAI"])),
+                        deptName: normalize(getFlexValue(item, ["JABATAN", "UNIT", "SEKSYEN"])),
+                        month: (getFlexValue(item, ["BULAN", "MONTH"]) || "").toString().trim(),
+                        hours: parseFloat(getFlexValue(item, ["JAM", "HOURS", "BERKURSUS"]) || 0)
+                    })));
 
-                    const formattedSubmissions = (result.submissions || []).map(item => ({
-                        name: normalizeName(item["NAMA"] || item["PEGAWAI"] || item["Nama"]),
-                        deptName: (item["JABATAN"] || item["UNIT"] || "").toString().toUpperCase().trim(),
-                        month: (item["BULAN"] || "").toString().trim(),
-                        hours: parseFloat(item["JAM"] || 0)
-                    }));
-
-                    const formattedStaff = (result.staffList || []).map(item => ({
-                        name: normalizeName(item["Nama"]),
+                    setMasterList((result.staffList || []).map(item => ({
+                        name: normalize(item["Nama"]),
                         deptId: item["JabatanID"]
-                    }));
-
-                    setSubmissions(formattedSubmissions);
-                    setMasterList(formattedStaff);
+                    })));
                     setFetchError(null);
                 } catch (e) {
-                    setFetchError("Gagal menarik data. Sila semak pautan API atau New Deployment di Apps Script.");
+                    setFetchError("Data tersekat. Sila cuba butang Refresh.");
                 } finally {
                     setLoading(false);
                 }
@@ -163,60 +164,31 @@
 
             useEffect(() => { fetchData(); }, []);
 
-            const handleUpdate = async (e) => {
-                e.preventDefault();
-                const type = modalType;
-                setModalType(null);
-                setLoading(true);
-                try {
-                    const action = type === 'add' ? 'add' : 'edit';
-                    const payload = type === 'add' 
-                        ? { action, name: formData.name, deptId: formData.deptId }
-                        : { action, oldName: formData.oldName, newName: formData.name, newDeptId: formData.deptId };
-
-                    await fetch(API_URL, { 
-                        method: 'POST', 
-                        body: JSON.stringify(payload),
-                        headers: { 'Content-Type': 'text/plain' }
-                    });
-                    setTimeout(fetchData, 1200);
-                } catch (err) { alert("Gagal menyimpan!"); setLoading(false); }
-            };
-
-            const handleDelete = async (name) => {
-                if(!confirm(`Padam rekod ${name}?`)) return;
-                setLoading(true);
-                try {
-                    await fetch(API_URL, { 
-                        method: 'POST', 
-                        body: JSON.stringify({ action: 'delete', name }),
-                        headers: { 'Content-Type': 'text/plain' }
-                    });
-                    setTimeout(fetchData, 1200);
-                } catch (err) { alert("Gagal memadam!"); setLoading(false); }
+            const isDeptMatch = (sheetDept, systemDept) => {
+                const s = normalize(sheetDept);
+                const d = normalize(systemDept);
+                if (!s || !d) return false;
+                return s.includes(d) || d.includes(s);
             };
 
             const complianceData = useMemo(() => {
                 const list = DEPARTMENTS.map(dept => {
-                    const inSheet = submissions.filter(s => s.deptName.includes(dept.name.toUpperCase())).map(s => s.name);
+                    const inSheet = submissions.filter(s => isDeptMatch(s.deptName, dept.name)).map(s => s.name);
                     const inMaster = masterList.filter(m => m.deptId === dept.id).map(m => m.name);
-                    const unique = [...new Set([...inSheet, ...inMaster])];
-                    const total = unique.length;
-                    const done = unique.filter(n => submissions.some(s => s.name === n && s.month.toLowerCase().includes(selectedMonth.toLowerCase()))).length;
-                    const pct = total > 0 ? Math.round((done/total)*100) : 0;
-                    return { ...dept, count: done, total, percentage: pct };
+                    const uniqueNames = [...new Set([...inSheet, ...inMaster])];
+                    const total = uniqueNames.length;
+                    const done = uniqueNames.filter(n => 
+                        submissions.some(s => s.name === n && s.month.toLowerCase().includes(selectedMonth.toLowerCase()))
+                    ).length;
+                    return { ...dept, count: done, total, percentage: total > 0 ? Math.round((done/total)*100) : 0 };
                 }).sort((a,b) => b.percentage - a.percentage);
-                
-                if (searchTerm && activeView === 'jabatan' && !selectedDeptId) {
-                    return list.filter(d => d.name.includes(searchTerm.toUpperCase()));
-                }
-                return list;
+                return searchTerm && activeView === 'jabatan' && !selectedDeptId ? list.filter(d => d.name.includes(searchTerm.toUpperCase())) : list;
             }, [selectedMonth, submissions, masterList, searchTerm, activeView, selectedDeptId]);
 
             const staffData = useMemo(() => {
                 const deptObj = DEPARTMENTS.find(d => d.id === selectedDeptId);
                 const names = [...new Set([
-                    ...submissions.filter(s => !selectedDeptId || s.deptName.includes(deptObj?.name)).map(s => s.name),
+                    ...submissions.filter(s => !selectedDeptId || isDeptMatch(s.deptName, deptObj?.name)).map(s => s.name),
                     ...masterList.filter(m => !selectedDeptId || m.deptId === selectedDeptId).map(m => m.name)
                 ])];
                 return names.map(n => {
@@ -232,37 +204,57 @@
                 }).filter(s => s.name.includes(searchTerm.toUpperCase())).sort((a,b) => a.name.localeCompare(b.name));
             }, [selectedDeptId, selectedMonth, searchTerm, submissions, masterList]);
 
+            const handleUpdate = async (e) => {
+                e.preventDefault();
+                const type = modalType;
+                setModalType(null);
+                setLoading(true);
+                try {
+                    const action = type === 'add' ? 'add' : 'edit';
+                    const payload = type === 'add' 
+                        ? { action, name: normalize(formData.name), deptId: formData.deptId }
+                        : { action, oldName: formData.oldName, newName: normalize(formData.name), newDeptId: formData.deptId };
+                    await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain' } });
+                    setTimeout(fetchData, 1000);
+                } catch (err) { alert("Ralat semasa menyimpan."); setLoading(false); }
+            };
+
+            const handleDelete = async (name) => {
+                if(!confirm(`Adakah anda pasti mahu memadam ${name}?`)) return;
+                setLoading(true);
+                try {
+                    await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', name }), headers: { 'Content-Type': 'text/plain' } });
+                    setTimeout(fetchData, 1000);
+                } catch (err) { alert("Gagal memadam."); setLoading(false); }
+            };
+
             return (
                 <div className="min-h-screen pb-20">
                     <header className="bg-white border-b sticky top-0 z-40 p-3 shadow-sm">
                         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-2">
-                                <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg"><IconAward /></div>
-                                <div><h1 className="text-sm font-black uppercase tracking-tight">40J & MyCPD LIVE</h1><p className="text-[7px] text-slate-400 font-bold uppercase">Sistem Pengurusan v5.7</p></div>
+                                <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg font-bold">CPD</div>
+                                <div><h1 className="text-sm font-black uppercase">Pemantauan Kursus</h1><p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest">v5.9 Super Normalizer</p></div>
                             </div>
-                            
                             <div className="flex bg-slate-100 p-1 rounded-lg border scale-90">
-                                <button onClick={() => {setActiveView('jabatan'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'jabatan' && !selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Jabatan</button>
-                                <button onClick={() => {setActiveView('individu'); setSelectedDeptId(null);}} className={`px-6 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'individu' || selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Individu</button>
+                                <button onClick={() => {setActiveView('jabatan'); setSelectedDeptId(null);}} className={`px-5 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'jabatan' && !selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Jabatan</button>
+                                <button onClick={() => {setActiveView('individu'); setSelectedDeptId(null);}} className={`px-5 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeView === 'individu' || selectedDeptId ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>Individu</button>
                             </div>
-
                             <div className="flex items-center gap-2 scale-90">
-                                <button onClick={() => {setFormData({name:'', deptId:'', oldName:''}); setModalType('add');}} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">+ Tambah Pegawai</button>
-                                <button onClick={fetchData} className="p-1.5 bg-white border rounded-lg hover:bg-slate-50 active:rotate-180 transition-all duration-500 shadow-sm"><svg className={loading ? "animate-spin" : ""} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
+                                <button onClick={() => {setFormData({name:'', deptId:'', oldName:''}); setModalType('add');}} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black shadow-md active:scale-95 transition-all">+ Pegawai</button>
+                                <button onClick={fetchData} className="p-1.5 bg-white border rounded-lg active:rotate-180 transition-all duration-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                                 <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border rounded-lg text-[9px] font-bold p-1.5 outline-none cursor-pointer">{MONTHS.map(m => <option key={m} value={m}>{m}</option>)}</select>
                             </div>
                         </div>
                     </header>
 
                     <main className="max-w-7xl mx-auto px-4 py-6">
-                        {fetchError && <div className="mb-4 p-3 bg-red-50 text-red-700 text-[10px] font-bold rounded-xl border border-red-100 animate-pulse">{fetchError}</div>}
-                        
                         <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-2">
-                                {selectedDeptId && <button onClick={() => {setSelectedDeptId(null); setSearchTerm('');}} className="p-1.5 bg-white border rounded-full hover:bg-slate-50 shadow-sm transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button>}
-                                <h2 className="text-sm font-black uppercase text-slate-700">{selectedDeptId ? DEPARTMENTS.find(d => d.id === selectedDeptId).name : (activeView === 'jabatan' ? 'Tapis Jabatan' : 'Cari Pegawai')}</h2>
+                                {selectedDeptId && <button onClick={() => {setSelectedDeptId(null); setSearchTerm('');}} className="p-1.5 bg-white border rounded-full shadow-sm transition-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button>}
+                                <h2 className="text-sm font-black uppercase text-slate-700">{selectedDeptId ? DEPARTMENTS.find(d => d.id === selectedDeptId).name : (activeView === 'jabatan' ? 'Tapis Jabatan' : 'Cari Nama')}</h2>
                             </div>
-                            <div className="w-full md:w-80"><input type="text" placeholder="Mula menaip untuk mencari..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-[11px] outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 uppercase font-bold transition-all shadow-sm" /></div>
+                            <div className="w-full md:w-80"><input type="text" placeholder="Mula menaip untuk mencari..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl px-4 py-2 text-[11px] outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 uppercase font-bold shadow-sm" /></div>
                         </div>
 
                         {activeView === 'jabatan' && !selectedDeptId ? (
@@ -280,8 +272,8 @@
                         ) : (
                             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
                                 <table className="w-full text-left text-[10px]">
-                                    <thead className="bg-slate-50 border-b font-black text-slate-500 uppercase tracking-widest">
-                                        <tr><th className="px-4 py-4">Pegawai</th><th className="px-4 py-4 text-center">Status {selectedMonth}</th><th className="px-4 py-4 text-center">Jumlah Jam</th><th className="px-4 py-4 text-center">Aksi</th></tr>
+                                    <thead className="bg-slate-50 border-b font-black text-slate-500 uppercase tracking-widest text-center">
+                                        <tr><th className="px-4 py-4 text-left">Pegawai</th><th className="px-4 py-4">Status {selectedMonth}</th><th className="px-4 py-4">Jumlah Jam</th><th className="px-4 py-4">Aksi</th></tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {staffData.length > 0 ? staffData.map((s, i) => (
@@ -291,8 +283,8 @@
                                                 <td className="px-4 py-3 text-center font-black text-blue-700">{s.total}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button onClick={() => { setFormData({name: s.name, deptId: s.deptId, oldName: s.name}); setModalType('edit'); }} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm" title="Kemaskini"><IconPencil /></button>
-                                                        <button onClick={() => handleDelete(s.name)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm" title="Padam"><IconTrash /></button>
+                                                        <button onClick={() => { setFormData({name: s.name, deptId: s.deptId, oldName: s.name}); setModalType('edit'); }} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm"><IconPencil /></button>
+                                                        <button onClick={() => handleDelete(s.name)} className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm"><IconTrash /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -308,9 +300,9 @@
                     {modalType && (
                         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl w-full max-w-xs shadow-2xl overflow-hidden scale-in">
-                                <div className="p-4 border-b flex justify-between items-center bg-slate-50 font-black text-slate-700"><h3 className="text-[10px] uppercase tracking-widest">{modalType === 'add' ? 'Daftar Pegawai' : 'Edit Maklumat'}</h3><button onClick={() => setModalType(null)} className="p-1 hover:bg-red-100 text-red-500 rounded-full transition-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-50 font-black text-slate-700 tracking-widest"><h3 className="text-[10px] uppercase">{modalType === 'add' ? 'Daftar Pegawai' : 'Edit Pegawai'}</h3><button onClick={() => setModalType(null)} className="p-1 hover:bg-red-100 text-red-500 rounded-full transition-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>
                                 <form onSubmit={handleUpdate} className="p-5 space-y-4">
-                                    <div><label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Nama Penuh</label><input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value.toUpperCase()})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-bold uppercase outline-none focus:ring-4 focus:ring-blue-500/10" required /></div>
+                                    <div><label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Nama Penuh</label><input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-bold uppercase outline-none focus:ring-4 focus:ring-blue-500/10" required /></div>
                                     <div><label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Jabatan</label><select value={formData.deptId} onChange={(e) => setFormData({...formData, deptId: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[11px] font-bold outline-none cursor-pointer" required><option value="">Pilih Jabatan...</option>{DEPARTMENTS.sort((a,b)=>a.name.localeCompare(b.name)).map(d=>(<option key={d.id} value={d.id}>{d.name}</option>))}</select></div>
                                     <button type="submit" className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">Sahkan & Simpan</button>
                                 </form>
